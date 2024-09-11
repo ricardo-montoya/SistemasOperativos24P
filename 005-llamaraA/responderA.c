@@ -19,6 +19,7 @@
 const char *SHM_NAME = "/shm_comunicacion";
 
 char mensaje[MAX];  // Array para leer los mensajes
+char mensaje_prev[MAX];  // Array para leer los mensajes
 
 void fin_de_transmision(int sig) {
     sprintf(mensaje, "corto\n");
@@ -65,20 +66,29 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, fin_de_transmision);
 
     pid_t pid = fork();
+    pid_t pid2 = fork();
+
     if (pid == 0) { // Proceso hijo: Recepción de mensajes
         do {
-            printf("==> ");
+      sleep(1);
             fflush(stdout);
-            printf("%s", shm);
-        } while (!EQ(shm, "corto\n"));
-    } else { // Proceso padre: Envío de mensajes
-        do {
-            printf("<== ");
-            fgets(mensaje, sizeof(mensaje), stdin);
-            strncpy(shm, mensaje, MAX);
-        } while (!EQ(mensaje, "cambio\n") && !EQ(mensaje, "corto\n"));
-        wait(NULL); // Esperar a que el hijo termine
+            if(!EQ(mensaje_prev, shm)){
+              printf("=> %s", shm);
+              strncpy(mensaje_prev, shm, MAX);
+            }
+        } while (!EQ(shm, "corto\n") && !EQ(mensaje_prev, "corto\n"));
+    exit(0);
+    }     
+
+    if (pid2 == 0){
+    do{
+        fgets(mensaje, sizeof(mensaje), stdin);
+        strncpy(shm, mensaje, MAX);
+        } while (!EQ(mensaje, "corto\n") && !EQ(shm, "corto\n"));
+    exit(0);
     }
+
+    wait(NULL);
 
     // Cleanup
     printf("FIN DE TRANSMISIÓN.\n");
@@ -86,5 +96,6 @@ int main(int argc, char *argv[]) {
     close(shm_fd);
     shm_unlink(SHM_NAME);
     exit(0);
+    return 0;
 }
 
